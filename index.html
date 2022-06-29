@@ -1,0 +1,24 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>秒表</title>
+    <link rel="stylesheet" href="index.css">
+    <script type="text/javascript" src="index.js"></script>
+</head>
+
+<body>
+    <div id="option_container">
+        <div>
+            <input id="tick" type="text" readonly disabled value="00:00:00.000">
+        </div>
+    </div>
+    <div class="player_container">
+        <video id="player" width="100%" type="video/mp4"
+            controls playsinline disableRemotePlayback x-webkit-airplay="deny" 
+            data-src-720p-30fps="Overwatch_Alive_Short_720p_30fps.mp4"
+            data-src-1080p-60fps="Overwatch_Alive_Short_1080p_60fps.mp4">
+        </video>
+    </div>
+</body>
+</html>
