@@ -1,5 +1,7 @@
 import datetime
 import os
+import platform
+import shutil
 import subprocess
 
 
@@ -22,7 +24,7 @@ for i, p in enumerate(platforms):
     print(i, p)
 print('--------------------')
 index = input('index: ')
-platform = platforms[int(index)]
+platform_ = platforms[int(index)]
 
 print('\n')
 
@@ -39,15 +41,24 @@ index = input('index: ')
 arch = archs[int(index)]
 
 
+# rename old
+if platform.system() == 'Darwin':
+    # macOS
+    shutil.rmtree(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.app', ignore_errors=True)
+else:
+    # Windows
+    shutil.rmtree(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}', ignore_errors=True)
+
+
 # pack electron app
 args = [
     'electron-packager',
     './',
     app_name,
-    '--icon=timer.ico',
+    '--icon=timer.icns' if platform.system() == 'Darwin' else '--icon=timer.ico',
     '--overwrite',
     '--prune=true',
-    f'--platform={platform}',
+    f'--platform={platform_}',
     f'--arch={arch}',
     f'--app-copyright="{app_copyright}"',
     f'--app-version={app_version}',
@@ -63,10 +74,23 @@ args = [
 ]
 subprocess.run(' '.join(args), shell=True)
 
+
 # remove files
-target = f'{app_name}-{platform}-{arch}/resources/app'
-for file in ('.gitignore', 'build.py', 'package-lock.json', 'timer.ico'):
+if platform.system() == 'Darwin':
+    # macOS
+    target = f'{app_name}-{platform_}-{arch}/{app_name}.app/Contents/Resources/app'
+else:
+    # Windows
+    target = f'{app_name}-{platform_}-{arch}/resources/app'
+
+for file in ('.gitignore', 'build.py', 'package-lock.json', 'timer.ico', 'timer.icns'):
     os.remove(f'{target}/{file}')
 
 # rename app
-os.rename(f'{app_name}-{platform}-{arch}', f'{app_name}.{platfom_alias[platform]}.{arch_alias[arch]}')
+if platform.system() == 'Darwin':
+    # macOS
+    os.rename(f'{app_name}-{platform_}-{arch}/{app_name}.app', f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.app')
+    shutil.rmtree(f'{app_name}-{platform_}-{arch}/')
+else:
+    # Windows
+    os.rename(f'{app_name}-{platform_}-{arch}', f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}')
