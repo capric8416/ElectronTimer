@@ -107,6 +107,9 @@ dist
 *.mp4
 *.zip
 ElectronTimer.Windows.x86
+ElectronTimer.Windows.x86.exe
 ElectronTimer.Windows.x64
+ElectronTimer.Windows.x64.exe
+ElectronTimer.macOS.x64
 ElectronTimer.macOS.x64.app
 

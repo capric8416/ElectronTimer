@@ -45,9 +45,13 @@ arch = archs[int(index)]
 if platform.system() == 'Darwin':
     # macOS
     shutil.rmtree(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.app', ignore_errors=True)
+    if os.path.exists(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.app.zip'):
+        os.remove(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.app.zip')
 else:
     # Windows
     shutil.rmtree(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}', ignore_errors=True)
+    if os.path.exists(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.exe'):
+        os.remove(f'{app_name}.{platfom_alias[platform_]}.{arch_alias[arch]}.exe')
 
 
 # pack electron app

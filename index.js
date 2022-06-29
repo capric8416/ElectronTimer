@@ -236,7 +236,7 @@ class Service {
 
 
     playVideo(self, name) {
-        if (self.videoPlaying) {
+        if (self.videoPlaying && (self.player.getAttribute('data-src-' + name.replace(' ', '-')) == self.player.getAttribute('src'))) {
             return
         }
 
