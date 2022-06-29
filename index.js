@@ -100,17 +100,23 @@ class Service {
 
     handleVideoPlayerEvent(self) {
         self.player.onpause = function () {
-            ipcRenderer.send('video', 'pause')
+            let tick = self.tick.style.display != 'none'
+            ipcRenderer.send('video', 'pause', tick)
             self.videoPlaying = false
             self.updateTick(self)
-            self.pauseTick(self)
+            if (tick) {
+                self.pauseTick(self)
+            }
         }
 
         self.player.onplay = function () {
-            ipcRenderer.send('video', 'play')
+            let tick = self.tick.style.display != 'none'
+            ipcRenderer.send('video', 'play', tick)
             self.videoPlaying = true
             self.updateTick(self)
-            self.playTick(self)
+            if (tick) {
+                self.playTick(self)
+            }
         }
     }
 
@@ -143,6 +149,10 @@ class Service {
 
 
     playTick(self) {
+        if (self.tickPlaying) {
+            return
+        }
+
         self.tickPlaying = true
 
         clearInterval(self.refreshInterval)
@@ -226,6 +236,10 @@ class Service {
 
 
     playVideo(self, name) {
+        if (self.videoPlaying) {
+            return
+        }
+
         if (name) {
             self.player.setAttribute('src', self.player.getAttribute('data-src-' + name.replace(' ', '-')) || '')
         }

@@ -159,7 +159,12 @@ function menuItemClicked(menu, item) {
     // Notify renderer
     mainWindow.webContents.send('menuItemClicked', { menu: menu, item: item.label })
 
-    if (menu == 'Tick') {
+    if (menu == 'Style') {
+        for (let i = 0; i < menuTemplate[menuTemplate.length - 5].submenu.length; i++) {
+            menuTemplate[menuTemplate.length - 5].submenu[i].checked = menuTemplate[menuTemplate.length - 5].submenu[i].label == radioState[menu]
+        }
+    }
+    else if (menu == 'Tick') {
         // Update tick menu
         if (item.label == 'Play') {
             menuTemplate[menuTemplate.length - 2].submenu[0].label = 'Pause'
@@ -181,7 +186,7 @@ function menuItemClicked(menu, item) {
 
 
 // Handle video player event
-ipcMain.on('video', function (event, state) {
+ipcMain.on('video', function (event, state, tick) {
     if (state == 'play') {
         // disable play
         menuTemplate[menuTemplate.length - 1].submenu[2].visible = false
@@ -190,7 +195,9 @@ ipcMain.on('video', function (event, state) {
         // enable stop
         menuTemplate[menuTemplate.length - 1].submenu[4].visible = true
         // update tick state
-        menuTemplate[menuTemplate.length - 2].submenu[0].label = 'Pause'
+        if (tick) {
+            menuTemplate[menuTemplate.length - 2].submenu[0].label = 'Pause'
+        }
         // reload menu
         Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
     }
@@ -202,7 +209,9 @@ ipcMain.on('video', function (event, state) {
         // enable stop
         menuTemplate[menuTemplate.length - 1].submenu[4].visible = true
         // update tick state
-        menuTemplate[menuTemplate.length - 2].submenu[0].label = 'Play'
+        if (tick) {
+            menuTemplate[menuTemplate.length - 2].submenu[0].label = 'Play'
+        }
         // reload menu
         Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate))
     }
