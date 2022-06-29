@@ -13,66 +13,46 @@
     /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
 }
 
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    overflow: hidden; 
+}
+
+
 #tick {
     width: 100%;
-    margin-top: .1em;
     border: none;
-    font-size: 6em;
-    font-weight: bold;
-    font-family: Lucida Console, Courier New, Consolas;
-    text-align: center;
+    font-size: 5em;
+    font-family: Consolas, Manoco;
+    display: block;
     color: red;
     background: transparent;
-}
-
-
-.video_options {
-    display: inline-block;
-    font-size: 1.5em;
-    height: 1.5em;
-    line-height: 1.5em;
-    border: solid 1px lightgray;
-}
-
-.video_options div {
-    display: inline-block;
-}
-
-
-.font {
-    display: inline-block;
-    font-size: 1em;
-    width: 1em;
     text-align: center;
 }
 
-.player_container {
-    text-align: center;
-}
 
-.video {
-    display: inline-block;
-    font-size: 1em;
-    margin: 0 0 .1em 0;
-    padding: .1em .2em .1em .2em;
-    border: none;
-    width: 10em;
-    cursor: pointer;
-}
-
-#player {
-    display: none;
-}
 
 #option_container {
     z-index: 200;
     position: absolute;
     width: 100%;
+    text-align: center;
 }
+
 
 .player_container {
     z-index: 100;
     position: absolute;
     width: 100%;
+    text-align: center;
 }
 
+
+
+#player {
+    display: none;
+}

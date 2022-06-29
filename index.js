@@ -1,241 +1,279 @@
-document.addEventListener('DOMContentLoaded', function(){
-    var timer = null;
+// Modules to control renderer life
+const { ipcRenderer } = require('electron')
+const path = require('path')
 
-    var last_ts = 0;
-    var tickcount = 0;
 
-    var tick_input = document.getElementById('tick');
-    var interval_input = document.getElementById('inverval');
-    var play_button = document.getElementById('play');
-    var font_value = document.getElementById('size_value');
-    var width_value = document.getElementById('width_value');
-    var tick = document.getElementById('tick');
-    var doc = document.getElementsByTagName('body')[0];
-    var video_stop = document.getElementById('video_stop')
-    var video_play_pause = document.getElementById('video_play_pause')
 
-    var playing = false;
+class Service {
+    constructor() {
+        this.refreshInterval = null
 
-    var history_index = 0;
+        this.style = 'Timer'
 
-    var tick_size = 0;
-    var player_size = 0;
-    var body_size = 0;
-    function get_font_size() {
-        tick_size = window.getComputedStyle(tick).getPropertyValue('font-size');
-        tick_size = parseInt(tick_size.substring(0, tick_size.indexOf('px')));
+        this.frameInterval = 1000 / 60
 
-        var player = document.getElementById('player');
-        player_size = window.getComputedStyle(player).getPropertyValue('width');
-        if (player_size == 'auto') {
-            player_size = window.getComputedStyle(tick).getPropertyValue('width');
-        }
-        player_size = parseInt(player_size.substring(0, player_size.indexOf('px')));
+        this.timestamp = 0
+        this.lastTimestamp = 0
 
-        body_size = window.getComputedStyle(doc).getPropertyValue('font-size');
-        body_size = parseInt(body_size.substring(0, body_size.indexOf('px')));
+        this.title = document.getElementsByTagName('title')[0]
+        this.body = document.getElementsByTagName('body')[0]
+        this.tick = document.getElementById('tick')
+        this.player = document.getElementById('player')
+
+        this.tickPlaying = false
+        this.videoPlaying = false
+
+        this.tickSize = 0
+        this.bodySize = 0
     }
 
-    get_font_size();
-    font_value.textContent = tick_size / body_size;
 
-    function sub_font_size() {
-        get_font_size();
-        var em = tick_size / body_size - 1;
-
-        font_value.textContent = em;
-        tick.style.fontSize = em + 'em';
-
-        width_value.textContent = parseInt(player_size / body_size);
-    }
-    document.sub_font_size = sub_font_size;
-
-    function add_font_size() {
-        get_font_size();
-        var em = tick_size / body_size + 1;
-        font_value.textContent = em;
-        tick.style.fontSize = em + 'em';
-    }
-    document.add_font_size = add_font_size;
-
-    function sub_player_width() {
-        get_font_size();
-        var em = player_size / body_size - 1;
-        player.style.fontSize = em + 'em';
+    start(self) {
+        self.handleMenuItemEvent(self)
+        self.handleVideoPlayerEvent(self)
     }
 
-    function play_video(target) {
-        var player = document.getElementById('player');
-        var name = target.value;
-        if (name == '停止') {
-            player.style.display = 'none';
-            player.pause();
-            playing = false;
-            document.getElementById('options').style.removeProperty('background-color');
-            video_stop.disabled = true
-            video_play_pause.disabled = true;
-        }
-        else if (name == '继续') {
-            target.value = '暂停'
-            player.play();
-            start_stop();
 
-        }
-        else if (name == '暂停') {
-            target.value = '继续'
-            player.pause();
-            start_stop();
-        }
-        else {
-            var prefix = window.location.hostname.length == 0 ? 'file:///D:/Downloads/' : '/static/video/';
-            player.setAttribute('src', prefix + player.getAttribute('data-src-' + name));
-            player.style.display = 'inline-block';
-            player.play();
-            playing = true;
-            video_stop.disabled = false
-            video_play_pause.disabled = false;
-            video_play_pause.value = '暂停';
-
-            if (play_button.value === '开始') {
-                var ts = (new Date()).valueOf();
-                last_ts = ts - tickcount;
-                play_button.value = '停止';
-                start();
+    // Handle menu item click event
+    handleMenuItemEvent(self) {
+        ipcRenderer.on('menuItemClicked', function (event, message) {
+            if (message.menu == 'Style') {
+                self.style = message.item
+                self.updateTick(self)
+                self.resetTick(self)
             }
+            else if (message.menu == 'frameRate') {
+                self.frameInterval = 1000 / parseInt(message.item)
+                if (self.tickPlaying) {
+                    self.pauseTick(self)
+                    self.playTick(self)
+                }
+            }
+            else if (message.menu == 'fontSize') {
+                if (message.item == 'Increase') {
+                    self.increaseFontSize(self)
+                }
+                else if (message.item == 'Decrease') {
+                    self.decreaseFontSize(self)
+                }
+                else if (message.item == 'Default') {
+                    self.tick.style.fontSize = '5em'
+                }
+            }
+            else if (message.menu == 'Video') {
+                if (message.item == 'Play') {
+                    self.playVideo(self)
+                }
+                else if (message.item == 'Pause') {
+                    self.pauseVideo(self)
+                }
+                else if (message.item == 'Stop') {
+                    self.clearVideo(self)
+                }
+                else {
+                    self.playVideo(self, message.item)
+                }
+            }
+            else if (message.menu == 'Tick') {
+                if (message.item == 'Play') {
+                    self.updateTick(self)
+                    self.playTick(self)
+                    self.playVideo(self)
+                }
+                else if (message.item == 'Pause') {
+                    self.updateTick(self)
+                    self.pauseTick(self)
+                    self.pauseVideo(self)
+                }
+                else if (message.item == 'Clear') {
+                    self.clearTick(self)
+                    self.clearVideo(self)
+                }
+                else if (message.item == 'Hide') {
+                    self.clearTick(self)
+                    self.hideTick(self)
+                }
+            }
+        })
+    }
+
+
+    handleVideoPlayerEvent(self) {
+        self.player.onpause = function () {
+            ipcRenderer.send('video', 'pause')
+            self.videoPlaying = false
+            self.updateTick(self)
+            self.pauseTick(self)
+        }
+
+        self.player.onplay = function () {
+            ipcRenderer.send('video', 'play')
+            self.videoPlaying = true
+            self.updateTick(self)
+            self.playTick(self)
         }
     }
-    document.play_video = play_video;
 
-    document.getElementById('option_container').addEventListener('mouseover', function (event) {
-        if (playing) {
-            document.getElementById('options').style.backgroundColor = 'white';
-            document.getElementById('dummy_options').style.backgroundColor = 'white';
-        }
-        else {
-            document.getElementById('options').style.removeProperty('background-color');
-            document.getElementById('dummy_options').style.removeProperty('background-color');
-        }
-    }, false);
 
-    document.getElementById('option_container').addEventListener('mouseleave', function (event) {
-        document.getElementById('options').style.removeProperty('background-color');
-        document.getElementById('dummy_options').style.removeProperty('background-color');
-    }, false);
+    getFontSize(self) {
+        self.tickSize = window.getComputedStyle(self.tick).getPropertyValue('font-size')
+        self.tickSize = parseInt(self.tickSize.substring(0, self.tickSize.indexOf('px')))
 
-    function start_stop() {
-        var ts = (new Date()).valueOf();
-        last_ts = ts - tickcount;
-
-        if (play_button.value === '开始') {
-            play_button.value = '停止';
-            start();
-        }
-        else if (play_button.value === '停止') {
-            play_button.value = '开始';
-            stop();
-        }
+        self.bodySize = window.getComputedStyle(self.body).getPropertyValue('font-size')
+        self.bodySize = parseInt(self.bodySize.substring(0, self.bodySize.indexOf('px')))
     }
-    document.start_stop = start_stop;
 
-    function start() {
-        clearInterval(timer);
 
-        var heartbeat = get_interval();
+    decreaseFontSize(self) {
+        self.getFontSize(self)
+        self.tick.style.fontSize = (self.tickSize / self.bodySize - .1) + 'em'
+    }
 
-        timer = setInterval(
+
+    increaseFontSize(self) {
+        self.getFontSize(self)
+        self.tick.style.fontSize = (self.tickSize / self.bodySize + .1) + 'em'
+    }
+
+
+    updateTick(self) {
+        self.now = (new Date()).valueOf()
+        self.lastTimestamp = self.now - self.timestamp
+    }
+
+
+    playTick(self) {
+        self.tickPlaying = true
+
+        clearInterval(self.refreshInterval)
+
+        self.tick.style.display = 'block'
+
+        self.refreshInterval = setInterval(
             function () {
-                var ts = (new Date()).valueOf();
-                tickcount = ts - last_ts;
+                if (self.style == 'Timer') {
+                    self.now = (new Date()).valueOf()
+                    self.timestamp = self.now - self.lastTimestamp
 
-                var temp = tickcount;
-                var hours = parseInt(temp / 3600000);
+                    let temp = self.timestamp
+                    let hours = parseInt(temp / 3600000)
 
-                temp %= 3600000;
-                var minutes = parseInt(temp / 60000);
+                    temp %= 3600000
+                    let minutes = parseInt(temp / 60000)
 
-                temp %= 60000;
-                var seconds = parseInt(temp / 1000);
+                    temp %= 60000
+                    let seconds = parseInt(temp / 1000)
 
-                var milliseconds = parseInt(temp % 1000);
+                    let milliseconds = parseInt(temp % 1000)
 
-                tick_input.value = hundred_padding(hours)
-                    + ':' + hundred_padding(minutes)
-                    + ':' + hundred_padding(seconds)
-                    + '.' + thousand_padding(milliseconds);
+                    self.tick.value = `${self.hundredPadding(hours)}:${self.hundredPadding(minutes)}:${self.hundredPadding(seconds)}.${self.thousandPadding(milliseconds)}`
+                }
+                else if (self.style == 'Clock') {
+                    self.now = new Date()
+                    self.tick.value = `${self.hundredPadding(self.now.getHours())}:${self.hundredPadding(self.now.getMinutes())}:${self.hundredPadding(self.now.getSeconds())}.${self.thousandPadding(self.now.getMilliseconds())}`
+                }
+                else if (self.style == 'Timestamp') {
+                    self.now = (new Date()).valueOf()
+                    let seconds = parseInt(self.now / 1000)
+                    let milliseconds = self.now % 1000
+                    self.tick.value = `${seconds}.${self.thousandPadding(milliseconds)}`
+                }
+
             },
-            heartbeat
-        );
-    };
-
-    function stop() {
-        clearInterval(timer);
+            self.frameInterval
+        )
     }
 
-    function reset(keep_history) {
-        clearInterval(timer);
-        play_button.value = '开始';
-        interval_input.value = 1;
-        tick_input.value = '00:00:00.000';
-        tickcount = 0;
 
-        if (!keep_history) {
-            reset_history();
-        }
-    }
-    document.reset = reset;
+    pauseTick(self) {
+        self.tickPlaying = false
 
-    function reset_history() {
-        history_index = 0;
-        var history = document.getElementById('history');
-        while (history.firstChild) {
-            history.removeChild(history.firstChild);
-        }
+        clearInterval(self.refreshInterval)
     }
 
-    function split() {
-        var history = document.getElementById('history');
-        var li = document.createElement('li');
-        var text = document.createTextNode(history_index + '. ' + tick_input.value);
-        li.appendChild(text);
-        history.appendChild(li);
-        history_index++;
-    }
-    document.split = split;
 
-    function split_reset() {
-        split();
-        reset(true);
-        start_stop();
-    }
-    document.split_reset = split_reset;
-
-    function hundred_padding(n) {
-        return n < 10 ? '0' + n : '' + n;
-    }
-
-    function thousand_padding(n) {
-        if (n < 10)
-            return '00' + n;
-        else if (n < 100)
-            return '0' + n;
-        else
-            return '' + n;
-    }
-
-    function get_interval() {
-        var v = interval_input.value;
-        if (v.length == 0) {
-            v = 1;
-            interval_input.value = 1;
-        }
-        else {
-            v = parseInt(v);
-            if (v < 1 || v > 1000) {
-                v = 1;
-                interval_input.value = 1;
+    resetTick(self) {
+        if (self.style == 'Timer' || self.style == 'Clock') {
+            self.tick.value = '00:00:00.000'
+            if (self.style == 'Timer') {
+                self.title.textContent = 'Electron Timer'
+            }
+            else {
+                self.title.textContent = 'Electron Clock'
             }
         }
-
-        return v;
+        else if (self.style == 'Timestamp') {
+            self.title.textContent = 'Electron Timestamp'
+            self.tick.value = '0000000000.000'
+        }
     }
-});
+
+
+    clearTick(self) {
+        self.tickPlaying = false
+
+        clearInterval(self.refreshInterval)
+
+        self.resetTick(self)
+
+        self.timestamp = 0
+    }
+
+
+    hideTick(self) {
+        self.tick.style.display = 'none'
+    }
+
+
+    playVideo(self, name) {
+        if (name) {
+            self.player.setAttribute('src', self.player.getAttribute('data-src-' + name.replace(' ', '-')) || '')
+        }
+        if (self.player.getAttribute('src')) {
+            self.tick.style.background = 'white'
+            self.player.style.display = 'inline-block'
+            self.player.loop = true
+            self.player.play()
+            self.videoPlaying = true
+        }
+    }
+
+
+    pauseVideo(self) {
+        self.player.pause()
+        self.videoPlaying = false
+    }
+
+
+    clearVideo(self) {
+        self.tick.style.background = 'transparent'
+        self.player.setAttribute('src', '')
+        self.player.style.display = 'none'
+        self.videoPlaying = false
+        ipcRenderer.send('video', 'stop')
+    }
+
+
+    hundredPadding(n) {
+        return n < 10 ? '0' + n : '' + n
+    }
+
+
+    thousandPadding(n) {
+        if (n < 10)
+            return '00' + n
+        else if (n < 100)
+            return '0' + n
+        else
+            return '' + n
+    }
+}
+
+
+
+// entry
+var service = null
+window.addEventListener('DOMContentLoaded', () => {
+    service = new Service()
+    service.start(service)
+})
